@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { UploadSection } from "@/components/UploadSection";
@@ -7,14 +7,46 @@ import { FileCard } from "@/components/FileCard";
 import { DeleteModal } from "@/components/DeleteModal";
 import { MOCK_FILES, MOCK_FOLDERS } from "@/lib/mock-data";
 import { MediaFile, getFileStatus, formatFileSize, FileStatus } from "@/lib/types";
+import * as api from "@/lib/api";
+import { Loader2 } from "lucide-react";
+
+// Check if we're running against the Flask backend or in dev/preview mode
+const isDev = import.meta.env.DEV || window.location.hostname.includes("lovable.app");
 
 export default function Index() {
   const [darkMode, setDarkMode] = useState(false);
-  const [files, setFiles] = useState<MediaFile[]>(MOCK_FILES);
+  const [files, setFiles] = useState<MediaFile[]>(isDev ? MOCK_FILES : []);
+  const [folders, setFolders] = useState<string[]>(isDev ? MOCK_FOLDERS : []);
   const [search, setSearch] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<MediaFile | null>(null);
+  const [loading, setLoading] = useState(!isDev);
+
+  // Fetch data from Flask API
+  const loadData = useCallback(async () => {
+    if (isDev) return;
+    try {
+      setLoading(true);
+      const [fetchedFolders, fetchedFiles] = await Promise.all([
+        api.fetchFolders(),
+        api.fetchFiles(),
+      ]);
+      setFolders(fetchedFolders);
+      setFiles(fetchedFiles);
+    } catch (err) {
+      console.error("Napaka pri nalaganju podatkov:", err);
+      toast.error("Ni mogoče povezati s strežnikom. Prikazujem demo podatke.");
+      setFolders(MOCK_FOLDERS);
+      setFiles(MOCK_FILES);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const toggleDark = useCallback(() => {
     setDarkMode((d) => {
@@ -23,32 +55,66 @@ export default function Index() {
     });
   }, []);
 
-  const handleUpload = useCallback((file: File, folder: string, duration: number) => {
-    const now = new Date();
-    const newFile: MediaFile = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      folder,
-      path: `${folder}/${file.name}`,
-      type: file.name.toLowerCase().endsWith(".mp4") ? "video" : "image",
-      size: file.size,
-      uploadedAt: now,
-      expiresAt: new Date(now.getTime() + duration * 24 * 60 * 60 * 1000),
-      duration,
-    };
-    setFiles((prev) => [newFile, ...prev]);
-    toast.success(`"${file.name}" uspešno naložena v ${folder}`);
-  }, []);
+  const handleUpload = useCallback(async (file: File, folder: string, duration: number) => {
+    if (isDev) {
+      // Dev mode: local mock
+      const now = new Date();
+      const newFile: MediaFile = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        folder,
+        path: `${folder}/${file.name}`,
+        type: file.name.toLowerCase().endsWith(".mp4") ? "video" : "image",
+        size: file.size,
+        uploadedAt: now,
+        expiresAt: new Date(now.getTime() + duration * 24 * 60 * 60 * 1000),
+        duration,
+      };
+      setFiles((prev) => [newFile, ...prev]);
+      toast.success(`"${file.name}" uspešno naložena v ${folder}`);
+      return;
+    }
 
-  const handleDelete = useCallback(() => {
+    try {
+      await api.uploadFile(file, folder, duration);
+      toast.success(`"${file.name}" uspešno naložena v ${folder}`);
+      await loadData(); // Refresh file list
+    } catch (err: any) {
+      toast.error(err.message || "Napaka pri nalaganju");
+    }
+  }, [loadData]);
+
+  const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
-    setFiles((prev) => prev.filter((f) => f.id !== deleteTarget.id));
-    toast.success(`"${deleteTarget.name}" izbrisana`);
-    setDeleteTarget(null);
-  }, [deleteTarget]);
 
-  const handleRefresh = useCallback(() => {
-    toast.success("Predvajalnik VLC je bil osežen!");
+    if (isDev) {
+      setFiles((prev) => prev.filter((f) => f.id !== deleteTarget.id));
+      toast.success(`"${deleteTarget.name}" izbrisana`);
+      setDeleteTarget(null);
+      return;
+    }
+
+    try {
+      await api.deleteFile(deleteTarget.path);
+      toast.success(`"${deleteTarget.name}" izbrisana`);
+      setDeleteTarget(null);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Napaka pri brisanju");
+    }
+  }, [deleteTarget, loadData]);
+
+  const handleRefresh = useCallback(async () => {
+    if (isDev) {
+      toast.success("Predvajalnik VLC je bil osvežen!");
+      return;
+    }
+    try {
+      await api.refreshVLC();
+      toast.success("Predvajalnik VLC je bil osvežen!");
+    } catch (err: any) {
+      toast.error(err.message || "Napaka pri osvežitvi VLC");
+    }
   }, []);
 
   const filtered = useMemo(() => {
@@ -75,7 +141,7 @@ export default function Index() {
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-        <UploadSection folders={MOCK_FOLDERS} onUpload={handleUpload} />
+        <UploadSection folders={folders} onUpload={handleUpload} />
         <FilterBar
           search={search}
           onSearchChange={setSearch}
@@ -83,10 +149,15 @@ export default function Index() {
           onFolderChange={setFolderFilter}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
-          folders={MOCK_FOLDERS}
+          folders={folders}
         />
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin mb-3" />
+            <p className="text-sm">Nalagam datoteke...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-lg font-medium">Ni najdenih datotek</p>
             <p className="text-sm mt-1">Spremeni filtre ali naloži novo datoteko.</p>
@@ -96,6 +167,14 @@ export default function Index() {
             {filtered.map((file) => (
               <FileCard key={file.id} file={file} onDelete={setDeleteTarget} />
             ))}
+          </div>
+        )}
+
+        {isDev && (
+          <div className="text-center py-4">
+            <span className="inline-block bg-accent text-accent-foreground text-xs font-medium px-3 py-1.5 rounded-full">
+              Demo način — za produkcijo zgradi in poženi s Flask backendom
+            </span>
           </div>
         )}
       </main>
