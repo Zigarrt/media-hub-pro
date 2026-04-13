@@ -1,6 +1,45 @@
+import { useState } from "react";
 import { Image, Film, Trash2, Calendar, Clock } from "lucide-react";
 import { MediaFile, getFileStatus, getProgress, getTimeRemaining, formatFileSize, STATUS_LABELS } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
+
+function MediaPreview({ file }: { file: MediaFile }) {
+  const [failed, setFailed] = useState(false);
+  const src = `${window.location.origin}/media/${file.path}`;
+
+  if (failed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-secondary">
+        {file.type === "video" ? (
+          <Film className="w-12 h-12 text-muted-foreground" />
+        ) : (
+          <Image className="w-12 h-12 text-muted-foreground" />
+        )}
+      </div>
+    );
+  }
+
+  if (file.type === "video") {
+    return (
+      <video
+        src={src}
+        className="w-full h-full object-cover"
+        muted
+        preload="metadata"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={file.name}
+      className="w-full h-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 interface FileCardProps {
   file: MediaFile;
