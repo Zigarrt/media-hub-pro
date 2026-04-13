@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, Image, Film, FolderPlus, Check } from "lucide-react";
+import { Upload, Image, Film, FolderPlus, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -7,6 +7,8 @@ interface UploadSectionProps {
   folders: string[];
   onUpload: (file: File, folder: string, duration: number) => void;
   onCreateFolder: (name: string) => void;
+  onDeleteFolder?: (name: string) => void;
+  folderFileCounts?: Record<string, number>;
 }
 
 const DURATION_OPTIONS = [
@@ -16,7 +18,7 @@ const DURATION_OPTIONS = [
   { label: "30 dni", value: 30 },
 ];
 
-export function UploadSection({ folders, onUpload, onCreateFolder }: UploadSectionProps) {
+export function UploadSection({ folders, onUpload, onCreateFolder, onDeleteFolder, folderFileCounts = {} }: UploadSectionProps) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(folders[0] || "");
   const [selectedDuration, setSelectedDuration] = useState(7);
@@ -129,6 +131,22 @@ export function UploadSection({ folders, onUpload, onCreateFolder }: UploadSecti
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
+            {onDeleteFolder && selectedFolder && (folderFileCounts[selectedFolder] || 0) === 0 && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  if (confirm(`Ali res želiš izbrisati mapo "${selectedFolder}"?`)) {
+                    onDeleteFolder(selectedFolder);
+                    setSelectedFolder(folders.filter(f => f !== selectedFolder)[0] || "");
+                  }
+                }}
+                className="px-4 py-3 h-auto text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                title="Izbriši prazno mapo"
+              >
+                <Trash2 className="w-5 h-5" />
+              </Button>
+            )}
             <Button
               variant="outline"
               size="lg"
