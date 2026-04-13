@@ -30,12 +30,36 @@ export function FileCard({ file, onDelete }: FileCardProps) {
   return (
     <div className="bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden animate-slide-up group">
       {/* Preview area */}
-      <div className="h-32 bg-secondary flex items-center justify-center relative overflow-hidden">
-        {file.type === "video" ? (
-          <Film className="w-12 h-12 text-muted-foreground" />
-        ) : (
-          <Image className="w-12 h-12 text-muted-foreground" />
-        )}
+      <div className="h-40 bg-secondary flex items-center justify-center relative overflow-hidden">
+        {file.type === "image" ? (
+          <img
+            src={`${window.location.origin}/media/${file.path}`}
+            alt={file.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+        ) : file.type === "video" ? (
+          <video
+            src={`${window.location.origin}/media/${file.path}`}
+            className="w-full h-full object-cover"
+            muted
+            preload="metadata"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+        ) : null}
+        <div className="hidden w-full h-full flex items-center justify-center">
+          {file.type === "video" ? (
+            <Film className="w-12 h-12 text-muted-foreground" />
+          ) : (
+            <Image className="w-12 h-12 text-muted-foreground" />
+          )}
+        </div>
         <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[status]}`}>
           {STATUS_LABELS[status]}
         </span>
