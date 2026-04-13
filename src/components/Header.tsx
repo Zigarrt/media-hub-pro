@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor, RefreshCw, BarChart3 } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
@@ -12,43 +12,37 @@ interface HeaderProps {
 export function Header({ darkMode, onToggleDark, onRefreshPlayer, totalFiles, totalSize }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <Monitor className="w-5 h-5 text-primary-foreground" />
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between max-w-6xl">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+            <Monitor className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-card-foreground">Predvajalnik</h1>
-            <p className="text-xs text-muted-foreground">Upravljalec medijev</p>
+            <h1 className="text-xl font-bold text-card-foreground">Predvajalnik</h1>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+              <HardDrive className="w-4 h-4" />
+              <span>{totalFiles} datotek • {totalSize}</span>
+            </div>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4" />
-            <span>{totalFiles} datotek</span>
-          </div>
-          <span>•</span>
-          <span>{totalSize}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            size="sm"
+            size="lg"
             onClick={onRefreshPlayer}
-            className="gap-1.5"
+            className="gap-2 text-base px-5 py-3 h-auto"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">Osveži VLC</span>
+            <RefreshCw className="w-5 h-5" />
+            <span className="hidden sm:inline">Osveži predvajalnik</span>
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggleDark}
-            className="h-9 w-9"
+            className="h-12 w-12"
           >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
         </div>
       </div>
