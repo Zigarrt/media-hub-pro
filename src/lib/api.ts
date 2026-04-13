@@ -75,3 +75,15 @@ export async function refreshVLC(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/refresh-vlc`, { method: "POST" });
   if (!res.ok) throw new Error("Osvežitev VLC ni uspela");
 }
+
+export async function deleteFolder(name: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/delete-folder`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Brisanje mape ni uspelo" }));
+    throw new Error(err.error || "Brisanje mape ni uspelo");
+  }
+}

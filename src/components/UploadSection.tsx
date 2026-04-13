@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, Image, Film, FolderPlus, Check } from "lucide-react";
+import { Upload, Image, Film, FolderPlus, Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -7,6 +7,8 @@ interface UploadSectionProps {
   folders: string[];
   onUpload: (file: File, folder: string, duration: number) => void;
   onCreateFolder: (name: string) => void;
+  onDeleteFolder?: (name: string) => void;
+  folderFileCounts?: Record<string, number>;
 }
 
 const DURATION_OPTIONS = [
