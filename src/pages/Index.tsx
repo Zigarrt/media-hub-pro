@@ -97,6 +97,29 @@ export default function Index() {
     }
   }, [loadData]);
 
+  const handleDeleteFolder = useCallback(async (name: string) => {
+    if (isDev) {
+      setFolders((prev) => prev.filter((f) => f !== name));
+      toast.success(`Mapa "${name}" je bila izbrisana`);
+      return;
+    }
+
+    try {
+      await api.deleteFolder(name);
+      toast.success(`Mapa "${name}" je bila izbrisana`);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Napaka pri brisanju mape");
+    }
+  }, [loadData]);
+
+  const folderFileCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    folders.forEach((f) => (counts[f] = 0));
+    files.forEach((f) => (counts[f.folder] = (counts[f.folder] || 0) + 1));
+    return counts;
+  }, [files, folders]);
+
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
 
@@ -154,7 +177,7 @@ export default function Index() {
       />
 
       <main className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
-        <UploadSection folders={folders} onUpload={handleUpload} onCreateFolder={handleCreateFolder} />
+        <UploadSection folders={folders} onUpload={handleUpload} onCreateFolder={handleCreateFolder} onDeleteFolder={handleDeleteFolder} folderFileCounts={folderFileCounts} />
         <FilterBar
           search={search}
           onSearchChange={setSearch}
