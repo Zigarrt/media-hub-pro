@@ -11,9 +11,9 @@ function MediaPreview({ file }: { file: MediaFile }) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-secondary">
         {file.type === "video" ? (
-          <Film className="w-12 h-12 text-muted-foreground" />
+          <Film className="w-14 h-14 text-muted-foreground" />
         ) : (
-          <Image className="w-12 h-12 text-muted-foreground" />
+          <Image className="w-14 h-14 text-muted-foreground" />
         )}
       </div>
     );
@@ -67,51 +67,52 @@ export function FileCard({ file, onDelete }: FileCardProps) {
     d.toLocaleDateString("sl-SI", { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <div className="bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden animate-slide-up group">
+    <div className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden animate-slide-up group">
       {/* Preview area */}
-      <div className="h-40 bg-secondary flex items-center justify-center relative overflow-hidden">
+      <div className="h-44 bg-secondary flex items-center justify-center relative overflow-hidden">
         <MediaPreview file={file} />
-        <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[status]}`}>
+        <span className={`absolute top-3 right-3 text-sm font-semibold px-3 py-1 rounded-full ${statusColors[status]}`}>
           {STATUS_LABELS[status]}
         </span>
-        <span className="absolute top-2 left-2 bg-card/80 backdrop-blur-sm text-xs font-medium text-card-foreground px-2 py-0.5 rounded-full">
-          {file.folder}
+        <span className="absolute top-3 left-3 bg-card/80 backdrop-blur-sm text-sm font-semibold text-card-foreground px-3 py-1 rounded-full">
+          📁 {file.folder}
         </span>
       </div>
 
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className="font-medium text-sm text-card-foreground truncate">{file.name}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {formatFileSize(file.size)} • {file.type === "video" ? "Video" : "Slika"}
+            <h3 className="font-semibold text-base text-card-foreground truncate">{file.name}</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {formatFileSize(file.size)} • {file.type === "video" ? "🎬 Video" : "🖼️ Slika"}
             </p>
           </div>
           <button
             onClick={() => onDelete(file)}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+            className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            title="Izbriši datoteko"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress */}
-        <div className="mb-3">
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+        <div className="mb-4">
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span>Preostalo</span>
-            <span>{remaining > 0 ? `${Math.ceil(remaining)} dni` : "Potečeno"}</span>
+            <span className="font-semibold">{remaining > 0 ? `${Math.ceil(remaining)} dni` : "Potečeno"}</span>
           </div>
-          <Progress value={progress} className={`h-1.5 ${progressColors[status]}`} />
+          <Progress value={progress} className={`h-2.5 rounded-full ${progressColors[status]}`} />
         </div>
 
         {/* Dates */}
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3 h-3" />
+        <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
             <span>Naloženo: {formatDate(file.uploadedAt)}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
             <span>Poteče: {formatDate(file.expiresAt)}</span>
           </div>
         </div>

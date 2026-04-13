@@ -8,9 +8,8 @@ import { DeleteModal } from "@/components/DeleteModal";
 import { MOCK_FILES, MOCK_FOLDERS } from "@/lib/mock-data";
 import { MediaFile, getFileStatus, formatFileSize, FileStatus } from "@/lib/types";
 import * as api from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, FolderOpen } from "lucide-react";
 
-// Check if we're running against the Flask backend or in dev/preview mode
 const isDev = import.meta.env.DEV || window.location.hostname.includes("lovable.app");
 
 export default function Index() {
@@ -23,7 +22,6 @@ export default function Index() {
   const [deleteTarget, setDeleteTarget] = useState<MediaFile | null>(null);
   const [loading, setLoading] = useState(!isDev);
 
-  // Fetch data from Flask API
   const loadData = useCallback(async () => {
     if (isDev) return;
     try {
@@ -57,7 +55,6 @@ export default function Index() {
 
   const handleUpload = useCallback(async (file: File, folder: string, duration: number) => {
     if (isDev) {
-      // Dev mode: local mock
       const now = new Date();
       const newFile: MediaFile = {
         id: crypto.randomUUID(),
@@ -71,16 +68,32 @@ export default function Index() {
         duration,
       };
       setFiles((prev) => [newFile, ...prev]);
-      toast.success(`"${file.name}" uspešno naložena v ${folder}`);
+      toast.success(`"${file.name}" uspešno naložena v mapo "${folder}"`);
       return;
     }
 
     try {
       await api.uploadFile(file, folder, duration);
-      toast.success(`"${file.name}" uspešno naložena v ${folder}`);
-      await loadData(); // Refresh file list
+      toast.success(`"${file.name}" uspešno naložena v mapo "${folder}"`);
+      await loadData();
     } catch (err: any) {
       toast.error(err.message || "Napaka pri nalaganju");
+    }
+  }, [loadData]);
+
+  const handleCreateFolder = useCallback(async (name: string) => {
+    if (isDev) {
+      setFolders((prev) => [...prev, name]);
+      toast.success(`Mapa "${name}" je bila ustvarjena`);
+      return;
+    }
+
+    try {
+      await api.createFolder(name);
+      toast.success(`Mapa "${name}" je bila ustvarjena`);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Napaka pri ustvarjanju mape");
     }
   }, [loadData]);
 
@@ -140,8 +153,8 @@ export default function Index() {
         totalSize={totalSize}
       />
 
-      <main className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
-        <UploadSection folders={folders} onUpload={handleUpload} />
+      <main className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
+        <UploadSection folders={folders} onUpload={handleUpload} onCreateFolder={handleCreateFolder} />
         <FilterBar
           search={search}
           onSearchChange={setSearch}
@@ -153,17 +166,18 @@ export default function Index() {
         />
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin mb-3" />
-            <p className="text-sm">Nalagam datoteke...</p>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="w-10 h-10 animate-spin mb-4" />
+            <p className="text-lg">Nalagam datoteke...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-lg font-medium">Ni najdenih datotek</p>
-            <p className="text-sm mt-1">Spremeni filtre ali naloži novo datoteko.</p>
+          <div className="text-center py-20 text-muted-foreground">
+            <FolderOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-xl font-semibold">Ni najdenih datotek</p>
+            <p className="text-base mt-2">Spremeni filtre ali naloži novo datoteko.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((file) => (
               <FileCard key={file.id} file={file} onDelete={setDeleteTarget} />
             ))}
@@ -171,8 +185,8 @@ export default function Index() {
         )}
 
         {isDev && (
-          <div className="text-center py-4">
-            <span className="inline-block bg-accent text-accent-foreground text-xs font-medium px-3 py-1.5 rounded-full">
+          <div className="text-center py-6">
+            <span className="inline-block bg-accent text-accent-foreground text-sm font-medium px-4 py-2 rounded-full">
               Demo način — za produkcijo zgradi in poženi s Flask backendom
             </span>
           </div>

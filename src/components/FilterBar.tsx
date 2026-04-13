@@ -18,25 +18,25 @@ export function FilterBar({
   folders,
 }: FilterBarProps) {
   return (
-    <div className="bg-card rounded-xl border border-border shadow-sm p-4 animate-fade-in">
+    <div className="bg-card rounded-2xl border border-border shadow-sm p-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Iskanje po imenu datoteke..."
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="🔍 Iskanje po imenu datoteke..."
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-input bg-background text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
             <select
               value={folderFilter}
               onChange={(e) => onFolderChange(e.target.value)}
-              className="pl-9 pr-8 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
+              className="pl-12 pr-10 py-3 rounded-xl border border-input bg-background text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
             >
               <option value="">Vse mape</option>
               {folders.map((f) => (
@@ -47,7 +47,7 @@ export function FilterBar({
           <select
             value={statusFilter}
             onChange={(e) => onStatusChange(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="px-4 py-3 rounded-xl border border-input bg-background text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Vsi statusi</option>
             {(Object.entries(STATUS_LABELS) as [FileStatus, string][]).map(([k, v]) => (

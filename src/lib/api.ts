@@ -59,6 +59,18 @@ export async function deleteFile(path: string): Promise<void> {
   }
 }
 
+export async function createFolder(name: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/create-folder`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Ustvarjanje mape ni uspelo" }));
+    throw new Error(err.error || "Ustvarjanje mape ni uspelo");
+  }
+}
+
 export async function refreshVLC(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/refresh-vlc`, { method: "POST" });
   if (!res.ok) throw new Error("Osvežitev VLC ni uspela");
