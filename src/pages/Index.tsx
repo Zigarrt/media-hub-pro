@@ -1,14 +1,29 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { UploadSection } from "@/components/UploadSection";
 import { FilterBar } from "@/components/FilterBar";
-import { FileCard } from "@/components/FileCard";
+import { SortableFileCard } from "@/components/SortableFileCard";
 import { DeleteModal } from "@/components/DeleteModal";
 import { MOCK_FILES, MOCK_FOLDERS } from "@/lib/mock-data";
 import { MediaFile, getFileStatus, formatFileSize, FileStatus } from "@/lib/types";
 import * as api from "@/lib/api";
 import { Loader2, FolderOpen } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 
 const isDev = import.meta.env.DEV || window.location.hostname.includes("lovable.app");
 
@@ -21,6 +36,12 @@ export default function Index() {
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<MediaFile | null>(null);
   const [loading, setLoading] = useState(!isDev);
+  const [fileOrder, setFileOrder] = useState<string[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const loadData = useCallback(async () => {
     if (isDev) return;
@@ -32,11 +53,14 @@ export default function Index() {
       ]);
       setFolders(fetchedFolders);
       setFiles(fetchedFiles);
+      // Preserve existing order or use API order
+      setFileOrder(fetchedFiles.map((f: MediaFile) => f.id));
     } catch (err) {
       console.error("Napaka pri nalaganju podatkov:", err);
       toast.error("Ni mogoče povezati s strežnikom. Prikazujem demo podatke.");
       setFolders(MOCK_FOLDERS);
       setFiles(MOCK_FILES);
+      setFileOrder(MOCK_FILES.map((f) => f.id));
     } finally {
       setLoading(false);
     }
@@ -140,6 +164,41 @@ export default function Index() {
     }
   }, [deleteTarget, loadData]);
 
+  const handleReorderFiles = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = fileOrder.indexOf(active.id as string);
+    const newIndex = fileOrder.indexOf(over.id as string);
+    const newOrder = arrayMove(fileOrder, oldIndex, newIndex);
+    setFileOrder(newOrder);
+
+    if (!isDev) {
+      try {
+        // Map IDs back to paths for the backend
+        const orderedPaths = newOrder
+          .map((id) => files.find((f) => f.id === id)?.path)
+          .filter(Boolean) as string[];
+        await api.reorderFiles(orderedPaths);
+        toast.success("Vrstni red datotek posodobljen");
+      } catch (err: any) {
+        toast.error(err.message || "Napaka pri preurejanju");
+      }
+    }
+  }, [fileOrder, files]);
+
+  const handleReorderFolders = useCallback(async (newFolders: string[]) => {
+    setFolders(newFolders);
+    if (!isDev) {
+      try {
+        await api.reorderFolders(newFolders);
+        toast.success("Vrstni red map posodobljen");
+      } catch (err: any) {
+        toast.error(err.message || "Napaka pri preurejanju map");
+      }
+    }
+  }, []);
+
   const handleRefresh = useCallback(async () => {
     if (isDev) {
       toast.success("Predvajalnik VLC je bil osvežen!");
@@ -177,7 +236,7 @@ export default function Index() {
       />
 
       <main className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
-        <UploadSection folders={folders} onUpload={handleUpload} onCreateFolder={handleCreateFolder} onDeleteFolder={handleDeleteFolder} folderFileCounts={folderFileCounts} />
+        <UploadSection folders={folders} onUpload={handleUpload} onCreateFolder={handleCreateFolder} onDeleteFolder={handleDeleteFolder} folderFileCounts={folderFileCounts} onReorderFolders={handleReorderFolders} />
         <FilterBar
           search={search}
           onSearchChange={setSearch}
@@ -200,11 +259,15 @@ export default function Index() {
             <p className="text-base mt-2">Spremeni filtre ali naloži novo datoteko.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((file) => (
-              <FileCard key={file.id} file={file} onDelete={setDeleteTarget} />
-            ))}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorderFiles}>
+            <SortableContext items={orderedFiltered.map((f) => f.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {orderedFiltered.map((file) => (
+                  <SortableFileCard key={file.id} file={file} onDelete={setDeleteTarget} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {isDev && (
