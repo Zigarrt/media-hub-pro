@@ -1,5 +1,6 @@
-import { Moon, Sun, Monitor, RefreshCw, HardDrive } from "lucide-react";
+import { Moon, Sun, Monitor, RefreshCw, HardDrive, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logout, useAuth } from "@/lib/auth";
 
 interface HeaderProps {
   darkMode: boolean;
@@ -43,6 +44,18 @@ export function Header({ darkMode, onToggleDark, onRefreshPlayer, totalFiles, to
             className="h-12 w-12"
           >
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={async () => {
+              await logout();
+              useAuth.getState().setUser(null);
+            }}
+            className="h-12 w-12 text-muted-foreground hover:text-destructive"
+            title="Odjava"
+          >
+            <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </div>
