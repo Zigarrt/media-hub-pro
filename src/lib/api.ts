@@ -87,3 +87,27 @@ export async function deleteFolder(name: string): Promise<void> {
     throw new Error(err.error || "Brisanje mape ni uspelo");
   }
 }
+
+export async function reorderFiles(orderedPaths: string[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/reorder-files`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order: orderedPaths }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Preureditev ni uspela" }));
+    throw new Error(err.error || "Preureditev ni uspela");
+  }
+}
+
+export async function reorderFolders(orderedFolders: string[]): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/reorder-folders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order: orderedFolders }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Preureditev map ni uspela" }));
+    throw new Error(err.error || "Preureditev map ni uspela");
+  }
+}

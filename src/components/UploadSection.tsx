@@ -1,7 +1,24 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, Image, Film, FolderPlus, Check, Trash2 } from "lucide-react";
+import { Upload, Image, Film, FolderPlus, Check, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface UploadSectionProps {
   folders: string[];
@@ -9,6 +26,7 @@ interface UploadSectionProps {
   onCreateFolder: (name: string) => void;
   onDeleteFolder?: (name: string) => void;
   folderFileCounts?: Record<string, number>;
+  onReorderFolders?: (folders: string[]) => void;
 }
 
 const DURATION_OPTIONS = [
@@ -18,7 +36,54 @@ const DURATION_OPTIONS = [
   { label: "30 dni", value: 30 },
 ];
 
-export function UploadSection({ folders, onUpload, onCreateFolder, onDeleteFolder, folderFileCounts = {} }: UploadSectionProps) {
+function SortableFolderChip({ folder, isSelected, count, onSelect, onDelete }: {
+  folder: string;
+  isSelected: boolean;
+  count: number;
+  onSelect: () => void;
+  onDelete?: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: folder });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
+      <button
+        {...attributes}
+        {...listeners}
+        className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+        title="Povleci za preureditev"
+      >
+        <GripVertical className="w-3 h-3" />
+      </button>
+      <button
+        onClick={onSelect}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          isSelected
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary text-secondary-foreground hover:bg-accent"
+        }`}
+      >
+        {folder} ({count})
+      </button>
+      {onDelete && count === 0 && (
+        <button
+          onClick={onDelete}
+          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+          title="Izbriši prazno mapo"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function UploadSection({ folders, onUpload, onCreateFolder, onDeleteFolder, folderFileCounts = {}, onReorderFolders }: UploadSectionProps) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(folders[0] || "");
   const [selectedDuration, setSelectedDuration] = useState(7);
@@ -26,6 +91,21 @@ export function UploadSection({ folders, onUpload, onCreateFolder, onDeleteFolde
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleFolderDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = folders.indexOf(active.id as string);
+      const newIndex = folders.indexOf(over.id as string);
+      const newOrder = arrayMove(folders, oldIndex, newIndex);
+      onReorderFolders?.(newOrder);
+    }
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -121,42 +201,37 @@ export function UploadSection({ folders, onUpload, onCreateFolder, onDeleteFolde
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6">
         <div>
           <label className="text-base font-semibold text-card-foreground mb-2 block">📁 Ciljna mapa</label>
-          <div className="flex gap-2">
-            <select
-              value={selectedFolder}
-              onChange={(e) => setSelectedFolder(e.target.value)}
-              className="flex-1 rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              {folders.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
-            {onDeleteFolder && selectedFolder && (folderFileCounts[selectedFolder] || 0) === 0 && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  if (confirm(`Ali res želiš izbrisati mapo "${selectedFolder}"?`)) {
-                    onDeleteFolder(selectedFolder);
-                    setSelectedFolder(folders.filter(f => f !== selectedFolder)[0] || "");
-                  }
-                }}
-                className="px-4 py-3 h-auto text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                title="Izbriši prazno mapo"
-              >
-                <Trash2 className="w-5 h-5" />
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setShowNewFolder(!showNewFolder)}
-              className="px-4 py-3 h-auto"
-              title="Ustvari novo mapo"
-            >
-              <FolderPlus className="w-5 h-5" />
-            </Button>
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleFolderDragEnd}>
+            <SortableContext items={folders} strategy={horizontalListSortingStrategy}>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {folders.map((f) => (
+                  <SortableFolderChip
+                    key={f}
+                    folder={f}
+                    isSelected={selectedFolder === f}
+                    count={folderFileCounts[f] || 0}
+                    onSelect={() => setSelectedFolder(f)}
+                    onDelete={onDeleteFolder ? () => {
+                      if (confirm(`Ali res želiš izbrisati mapo "${f}"?`)) {
+                        onDeleteFolder(f);
+                        setSelectedFolder(folders.filter(x => x !== f)[0] || "");
+                      }
+                    } : undefined}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNewFolder(!showNewFolder)}
+            className="gap-2"
+            title="Ustvari novo mapo"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Nova mapa
+          </Button>
 
           {showNewFolder && (
             <div className="flex gap-2 mt-3 animate-fade-in">
