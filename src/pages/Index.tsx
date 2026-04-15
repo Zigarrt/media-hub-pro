@@ -221,6 +221,15 @@ export default function Index() {
     });
   }, [files, search, folderFilter, statusFilter]);
 
+  const orderedFiltered = useMemo(() => {
+    if (fileOrder.length === 0) return filtered;
+    return [...filtered].sort((a, b) => {
+      const ai = fileOrder.indexOf(a.id);
+      const bi = fileOrder.indexOf(b.id);
+      return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+    });
+  }, [filtered, fileOrder]);
+
   const totalSize = useMemo(() => {
     return formatFileSize(files.reduce((sum, f) => sum + f.size, 0));
   }, [files]);
